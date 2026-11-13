@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "mele-va": {
+      "type": "streamable-http",
+      "url": "https://porzljqjsqlqutwtwyqb.supabase.co/functions/v1/mele-mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "authorizationUrl": "https://porzljqjsqlqutwtwyqb.supabase.co/auth/v1/oauth/authorize",
+            "tokenUrl": "https://porzljqjsqlqutwtwyqb.supabase.co/auth/v1/oauth/token",
+            "baseScopes": ["openid", "email", "profile"]
+          }
+        }
+      }
+    }
+  }
+}

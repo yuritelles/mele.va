@@ -34,3 +34,9 @@ Para ativar, configurar no painel Supabase:
 4. Conectar o endpoint MCP no ChatGPT e testar leitura, preparação, revisão no app, retomada e revogação com contas distintas. A conexão ainda não foi instalada nem validada ponta a ponta.
 
 Documentação: https://supabase.com/docs/guides/auth/oauth-server/getting-started e https://supabase.com/docs/guides/auth/oauth-server/token-security.
+
+## Editar dados da viagem
+
+O proprietário usa **Editar viagem** na barra superior para alterar nome, datas e destinos gerais. Atividades mantêm suas datas. Dias adicionados ficam vazios. A redução do período é recusada se excluir planejamento, notas ou reservas, inclusive esperas e atividades que cruzam a meia-noite. As cidades dos dias existentes continuam editáveis no próprio dia. Outros dispositivos atualizam os dados ao sincronizar.
+
+O pacote de desenvolvimento do plugin está em `plugin/`; sua ativação ainda depende da configuração OAuth e dos testes descritos ali.

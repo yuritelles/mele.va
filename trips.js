@@ -23,3 +23,18 @@ $('#copy-trip-link').onclick=async()=>{try{await navigator.clipboard.writeText(l
 $('#trip-context').onclick=()=>{$('#context-text').value=activeTrip.context;$('#context-text').readOnly=activeRole!=='owner';$('#context-save').hidden=activeRole!=='owner';$('#context-dialog').showModal();};
 $('#context-close').onclick=()=>$('#context-dialog').close();$('#context-save').onclick=async()=>{const context=$('#context-text').value;const {error}=await client.from('trips').update({context}).eq('id',activeTrip.id);$('#context-message').textContent=error?error.message:'Preferências salvas.';if(!error)activeTrip.context=context;};
 $('#trip-history').onclick=async()=>{const {data,error}=await client.from('trip_history').select('actor_email,action,created_at,revision').eq('trip_id',activeTrip.id).order('created_at',{ascending:false}).limit(50);$('#history-list').textContent=error?error.message:data.map(x=>new Date(x.created_at).toLocaleString('pt-BR')+' · '+x.actor_email+' · '+x.action+' (versão '+x.revision+')').join('\n')||'Nenhuma alteração registrada ainda.';$('#history-dialog').showModal();};$('#history-close').onclick=()=>$('#history-dialog').close();
+
+let editRevision;
+$('#trip-edit').onclick=async()=>{
+ if(activeRole!=='owner')return;
+ const f=$('#trip-edit-form');f.reset();$('#trip-edit-message').textContent='Carregando…';f.querySelector('[type=submit]').disabled=true;editRevision=undefined;$('#trip-edit-dialog').showModal();
+ const [meta,snapshot]=await Promise.all([client.from('trips').select('*').eq('id',activeTrip.id).single(),client.from('trip_state').select('revision').eq('id',activeTrip.id).single()]);
+ if(meta.error||snapshot.error){$('#trip-edit-message').textContent='Não foi possível carregar. Feche e tente novamente.';return;}
+ editRevision=snapshot.data.revision;f.elements.name.value=meta.data.name;f.elements.start.value=meta.data.start_date;f.elements.end.value=meta.data.end_date;f.elements.destinations.value=meta.data.destinations.join(', ');$('#trip-edit-message').textContent='';f.querySelector('[type=submit]').disabled=false;
+};
+$('#trip-edit-cancel').onclick=()=>$('#trip-edit-dialog').close();
+$('#trip-edit-form').onsubmit=async e=>{
+ e.preventDefault();if(editRevision===undefined)return;const f=e.currentTarget,b=f.querySelector('[type=submit]');b.disabled=true;
+ try{const cities=[...new Set(f.elements.destinations.value.split(',').map(x=>x.trim()).filter(Boolean))];const {error}=await client.rpc('edit_trip',{trip_id:activeTrip.id,trip_name:f.elements.name.value.trim(),first_day:f.elements.start.value,last_day:f.elements.end.value,cities,expected_revision:editRevision});if(error)throw error;location.reload();}
+ catch(e){$('#trip-edit-message').textContent=e.message;b.disabled=false;}
+};

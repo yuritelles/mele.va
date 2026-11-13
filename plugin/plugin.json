@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "mele-va",
+  "version": "0.1.0",
+  "description": "Consulte viagens do mele.va e prepare atividades e restaurantes em lotes para revisão.",
+  "author": {"name": "mele.va"},
+  "homepage": "https://yuritelles.github.io/mele.va/",
+  "repository": "https://github.com/yuritelles/mele.va",
+  "keywords": ["travel", "itinerary", "portuguese"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "mele.va",
+        "shortDescription": "Planeje viagens e revise importações",
+        "longDescription": "Acesse somente viagens próprias ou compartilhadas. Prepare atividades e restaurantes em lotes retomáveis e revise os itens no mele.va antes de aplicá-los.",
+        "developerName": "mele.va",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "websiteURL": "https://yuritelles.github.io/mele.va/",
+        "defaultPrompt": ["Liste minhas viagens no mele.va.", "Prepare atividades para minha viagem e deixe os itens para revisão."],
+        "brandColor": "#063559"
+      }
+    }
+  }
+}

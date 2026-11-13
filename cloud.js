@@ -19,7 +19,7 @@ export async function loadTrip(){
  if(base.error||saved.error){$('#switch-account').hidden=false;throw Error('Não foi possível acessar a viagem. Verifique sua conexão e use uma das contas autorizadas.');}
  revision=saved.data.revision;current=saved.data.document;conflict=!!pending();
  document.body.classList.remove('signed-out');$('#login-panel').hidden=true;$('#cloud-tools').hidden=false;showStatus();
- document.body.classList.toggle('read-only',!canEdit());$('#trip-sharing').hidden=activeRole!=='owner';
+ document.body.classList.toggle('read-only',!canEdit());$('#trip-sharing').hidden=activeRole!=='owner';$('#trip-edit').hidden=activeRole!=='owner';
  showStatus();
  return {dataset:base.data.data,...current,trip:activeTrip};
 }
@@ -47,7 +47,7 @@ async function refresh(){
  if(error){document.body.classList.add('read-only');status.textContent='Acesso indisponível. Atualize a página para verificar suas permissões.';return;}
  if(busy||document.querySelector('dialog[open]'))return;
  document.body.classList.toggle('read-only',!canEdit());
- if(data.revision!==revision){const base=await client.from('trip_baseline').select('data').eq('id',activeTrip.id).single();if(base.error||busy||document.querySelector('dialog[open]'))return;revision=data.revision;current=data.document;listener?.(current,base.data.data);}showStatus();
+ if(data.revision!==revision){const meta=await client.from('trips').select('*').eq('id',activeTrip.id).single();if(meta.error)return;if(['name','start_date','end_date','destinations'].some(k=>JSON.stringify(meta.data[k])!==JSON.stringify(activeTrip[k]))){location.reload();return;}const base=await client.from('trip_baseline').select('data').eq('id',activeTrip.id).single();if(base.error||busy||document.querySelector('dialog[open]'))return;revision=data.revision;current=data.document;listener?.(current,base.data.data);}showStatus();
 }
 setInterval(refresh,15000);window.addEventListener('focus',refresh);
 client.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT')location.reload();});
