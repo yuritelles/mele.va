@@ -9,11 +9,18 @@ do $$ declare c jsonb := current_setting('test.owner_claims')::jsonb; o jsonb; b
  perform set_config('test.mcp_claims',(o->'claims')::text,true);
 end;$$;
 set local role authenticated;
-do $$ declare n integer;j uuid;begin
+do $$ declare n integer;j uuid;k text;begin
  perform set_config('request.jwt.claims',current_setting('test.owner_claims'),true);
  if not exists(select 1 from public.trips where id=current_setting('test.trip')) then raise exception 'Browser access broken';end if;
  perform set_config('request.jwt.claims',current_setting('test.mcp_claims'),true);
  if not exists(select 1 from public.trips where id=current_setting('test.trip')) then raise exception 'MCP read broken';end if;
+ k:=public.create_trip('OAuth rollback test','2030-01-30','2030-02-06',array['Test']);
+ if not exists(select 1 from public.trips where id=k and owner_id=auth.uid()) or not exists(select 1 from public.trip_baseline where id=k and jsonb_array_length(data->'days')=8) or not exists(select 1 from public.trip_state where id=k) then raise exception 'Trip creation incomplete';end if;
+ begin
+  perform public.create_trip('Invalid period','2030-02-06','2030-01-30',array['Test']);
+  raise exception 'Invalid dates accepted';
+ exception when check_violation then null;end;
+
  update public.trips set name=name where id=current_setting('test.trip');get diagnostics n=row_count;
  if n<>0 then raise exception 'OAuth could edit trip';end if;
  update public.trip_state set document=document where id=current_setting('test.trip');get diagnostics n=row_count;
@@ -24,6 +31,11 @@ do $$ declare n integer;j uuid;begin
  if n<>0 then raise exception 'OAuth could approve import';end if;
  perform set_config('request.jwt.claims',(current_setting('test.mcp_claims')::jsonb||'{"client_id":"untrusted"}')::text,true);
  if exists(select 1 from public.trips) or exists(select 1 from public.import_jobs) then raise exception 'Foreign OAuth has access';end if;
+ begin
+  perform public.create_trip('Foreign OAuth','2030-01-30','2030-02-06',array['Test']);
+  raise exception 'Foreign client created a trip';
+ exception when insufficient_privilege then null;end;
+
  perform set_config('request.jwt.claims',(current_setting('test.mcp_claims')::jsonb||'{"aud":"authenticated"}')::text,true);
  if exists(select 1 from public.trips) then raise exception 'Wrong audience has access';end if;
  perform set_config('request.jwt.claims',(current_setting('test.mcp_claims')::jsonb||jsonb_build_object('sub',gen_random_uuid(),'email','unrelated@example.invalid'))::text,true);

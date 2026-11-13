@@ -9,7 +9,7 @@ test('MCP exposes read and resumable staging tools, without direct apply tool',a
  const server=createServer({}),transport=new WebStandardStreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});
  await server.connect(transport);
  const response=await transport.handleRequest(new Request(endpoint,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list',params:{}})}));
- const body=await response.json();assert.equal(response.status,200);assert.equal(body.result.tools.length,6);assert.ok(body.result.tools.some(t=>t.name==='stage_import'));assert.ok(!body.result.tools.some(t=>t.name==='commit_import'));await server.close();
+ const body=await response.json();assert.equal(response.status,200);assert.equal(body.result.tools.length,7);assert.ok(body.result.tools.some(t=>t.name==='stage_import'));assert.ok(body.result.tools.some(t=>t.name==='create_trip'));assert.ok(!body.result.tools.some(t=>t.name==='commit_import'));await server.close();
 });
 
 test('MCP accepts only live dedicated OAuth claims',()=>{const c={iss:'https://porzljqjsqlqutwtwyqb.supabase.co/auth/v1',client_id:'expected',aud:endpoint,role:'authenticated',sub:'user',exp:Date.now()/1000+3600};assert.equal(validClaims(c,'expected'),true);for(const change of [{client_id:undefined},{client_id:'other'},{aud:'authenticated'},{iss:'https://attacker.test'},{role:'service_role'},{exp:0},{sub:null}])assert.equal(validClaims({...c,...change},'expected'),false);});

@@ -44,3 +44,7 @@ O pacote de desenvolvimento do plugin está em `plugin/`; sua ativação ainda d
 ## Continuar no ChatGPT
 
 O painel **Usar no ChatGPT** substitui o chat incorporado adiado. Permite escolher uma tarefa, revisar/copiar o pedido com nome e ID da viagem e abrir o ChatGPT. Não envia mensagens automaticamente nem exporta o roteiro. A conexão MCP ainda precisa ser ativada; o painel informa isso. O plano de cada pessoa é utilizado no próprio ChatGPT, sem chamadas de IA faturadas ao proprietário pelo mele.va.
+
+## Criar viagens pelo ChatGPT
+
+O MCP 2.1 expõe `create_trip` (nome, datas e cidades), usando a mesma transação e regras de proprietário do app. Consulte `list_trips` antes de criar e após um timeout para evitar duplicação. A operação não é idempotente. A criação retorna o ID da viagem vazia para preparar lotes de atividades/restaurantes. As reservas estruturadas continuam pendentes; aplicar importações e compartilhar continuam no app. A migração `db/oauth-create-trip.sql` permite apenas inserções iniciais nas três tabelas da viagem, preservando a restrição ao cliente OAuth e à propriedade.
