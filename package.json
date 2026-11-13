@@ -12,9 +12,12 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@supabase/supabase-js": "2.119.0"
+    "@modelcontextprotocol/sdk": "1.26.0",
+    "@supabase/supabase-js": "2.119.0",
+    "zod": "3.25.76"
   },
   "devDependencies": {
-    "esbuild": "0.25.12"
+    "esbuild": "0.25.12",
+    "jsdom": "26.1.0"
   }
 }

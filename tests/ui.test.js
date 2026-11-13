@@ -1,0 +1,22 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {JSDOM} from 'jsdom';
+import * as schedule from '../schedule.js';
+const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
+const source=(await readFile(new URL('../app.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'');
+test('empty new trip across years and imported activity render without errors',async()=>{
+ const dom=new JSDOM(html,{url:'https://example.test/?trip=test',runScripts:'outside-only'});
+ const w=dom.window;w.HTMLElement.prototype.scrollIntoView=function(){};
+ const trip={id:'test',name:'Viagem de teste',start_date:'2028-12-31',end_date:'2029-01-01',destinations:['Teste']};
+ const days=[trip.start_date,trip.end_date].map(date=>({date,cities:['Teste'],blocks:[],overnight:null}));
+ const block={id:'import-123',title:'Atividade importada',kind:'main',category:'tour',start:540,end:660,note:''};
+ Object.assign(w,schedule,{activeTrip:trip,canEdit:()=>true,loadTrip:async()=>({dataset:{days,reservations:[],sheetLodging:0},state:{[trip.start_date]:{'import-123':block}},restaurants:[],trip}),watchTrip:()=>{},saveTrip:async()=>{},prepareImport:()=>{}});
+ await w.eval('(async()=>{'+source+'})()');
+ assert.equal(w.document.querySelector('#login-message').textContent,'');
+ assert.match(w.document.querySelector('#content').textContent,/Atividade importada/);
+ assert.equal(w.document.querySelector('.hero h1').textContent,trip.name);
+ w.location.hash='reservas';w.dispatchEvent(new w.HashChangeEvent('hashchange'));
+ assert.doesNotMatch(w.document.querySelector('#content').textContent,/undefined|NaN/);
+ dom.window.close();
+});

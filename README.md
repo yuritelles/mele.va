@@ -1,21 +1,36 @@
-# mele.va — Ásia 2027
+# mele.va
 
-Interface estática para GitHub Pages com Supabase Auth e Postgres. Os dados de viagem ficam exclusivamente no banco com RLS; este repositório contém apenas código e a chave pública do cliente.
+Planejador de viagens estático (GitHub Pages), com Google login, Supabase Auth e Postgres. Dados pessoais ficam no banco protegido por RLS, nunca no repositório.
 
-## Desenvolvimento
+## Desenvolvimento e publicação
 
-`npm ci`, `npm test`, `npm run build`. Publicação pelo GitHub Pages a partir da raiz de `main`. Não adicionar `timeline.json`, backups pessoais, chaves secretas ou credenciais OAuth ao repositório.
+`npm ci`, `npm test`, `npm run build`. GitHub Pages publica a raiz de `main`. Nunca adicionar backups, `timeline.json`, chaves secretas ou credenciais OAuth. A chave publishable é pública por definição; a autorização depende do banco.
 
-## Configuração de autenticação pendente
+## Viagens e usuários
 
-No Google Cloud, criar cliente OAuth do tipo Web. Origem: `https://yuritelles.github.io`. URI de redirecionamento: `https://porzljqjsqlqutwtwyqb.supabase.co/auth/v1/callback`.
+O primeiro login Google cria a conta. Cada pessoa vê as viagens que criou ou recebeu por compartilhamento. O proprietário pode conceder edição ou somente leitura por e-mail e remover acessos. Compartilhar não envia e-mail automaticamente. As preferências são armazenadas por viagem. O histórico registra alterações do planejamento; não oferece restauração automática.
 
-No Supabase Auth, ativar Google com o Client ID e Client Secret (apenas no painel, nunca no frontend). Site URL e Redirect URL permitida: `https://yuritelles.github.io/mele.va/`.
+A viagem existente foi vinculada ao proprietário e ao compartilhamento já autorizado sem substituir seu roteiro. Os scripts em `db/` documentam a evolução; a migração inicial exige a identificação do proprietário existente por configuração de sessão. Não executar novamente em um banco já migrado.
 
-A lista de acesso fica em `public.trip_access`. O login Google não concede acesso por si só: o email precisa estar autorizado pelas políticas de RLS. A função `save_trip` usa revisão esperada para rejeitar gravações concorrentes desatualizadas.
+## Sincronização e backups
 
-## Migrar alterações locais
+Atualizações são consultadas a cada 15 segundos e ao retornar à janela, quando nenhum editor está aberto. Revisões rejeitam gravações concorrentes desatualizadas. Não há edição offline automática. Falhas geram backup pendente local por usuário/viagem. Exporte-o e importe para revisar diferenças. Backups de outra viagem são rejeitados; arquivos antigos sem ID só podem ser importados na viagem original.
 
-No planejador anterior, usar **Exportar alterações** em cada navegador que tenha edições. No novo app autenticado, usar **Importar alterações** e revisar divergências. A ausência de restaurantes em um arquivo não apaga registros da nuvem. O app não importa automaticamente o protótipo antigo do mele.va, que tinha outro formato.
+## Importações longas — primeira etapa
 
-A sincronização consulta atualizações a cada 15 segundos e ao voltar à janela, quando nenhum editor está aberto. Salvamento exige conexão; falhas permanecem no editor e geram um backup pendente local para exportação. Não há edição offline automática.
+Lotes persistem no banco, em blocos de até 50 itens. É possível retomá-los pelo ID. Cada item tem uma chave estável de origem; repetir a mesma chave não duplica o registro. Chaves diferentes não são deduplicadas semanticamente. O usuário revisa itens em **Importações** antes de aplicar.
+
+Suporte atual: atividades e restaurantes. Importação de reservas estruturadas (hospedagem, localizador, custos, cancelamentos e revisões de confirmação) ainda precisa ser implementada. Não anunciar importação completa de confirmações antes dessa etapa. O servidor não acessa caixas de e-mail: o ChatGPT precisa de uma conexão de e-mail e autorização próprias.
+
+## Conexão ChatGPT — ativação pendente
+
+`server/` contém a função `mele-mcp` com leitura de viagens e preparação de lotes; `consent.html` contém a autorização. O endpoint fica bloqueado (503) enquanto `MCP_CLIENT_ID` não estiver configurado. Tokens comuns do navegador são recusados. Ainda é necessário validar o fluxo OAuth completo em conta real antes de considerar a integração disponível.
+
+Para ativar, configurar no painel Supabase:
+
+1. Auth > OAuth Server: habilitar o servidor; configurar a URL de consentimento para `https://yuritelles.github.io/mele.va/consent.html`. Conferir a URL resultante do Site URL + Authorization Path, pois o app está numa subpasta. Adicionar essa URL em Auth > URL Configuration > Redirect URLs para o retorno do login Google.
+2. Registrar um cliente OAuth dedicado ao ChatGPT, com PKCE e o callback exato apresentado pela interface de conexão do ChatGPT. Não habilitar registro dinâmico irrestrito. Guardar o segredo apenas nos painéis adequados. Definir o Client ID como `MCP_CLIENT_ID` na função.
+3. Configurar e testar um access-token hook para esse cliente que inclua a audiência `https://porzljqjsqlqutwtwyqb.supabase.co/functions/v1/mele-mcp`. Antes da ativação, restringir também os clientes OAuth permitidos nas políticas do banco e validar a audiência contra o Data API. Não alterar a audiência das sessões normais do app. O código deliberadamente recusa tokens sem a audiência específica.
+4. Conectar o endpoint MCP no ChatGPT e testar leitura, preparação, revisão no app, retomada e revogação com contas distintas. A conexão ainda não foi instalada nem validada ponta a ponta.
+
+Documentação: https://supabase.com/docs/guides/auth/oauth-server/getting-started e https://supabase.com/docs/guides/auth/oauth-server/token-security.

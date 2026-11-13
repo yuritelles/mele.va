@@ -2,7 +2,7 @@ const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const object=x=>x&&typeof x==='object'&&!Array.isArray(x);
 const norm=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 export function mergeBackup(input,current,dataset,valid){
- if(input.format!=='asia-2027-backup-v1'||!object(input.state)||!Array.isArray(input.restaurants))throw Error('Use o arquivo exportado pelo planejador Ásia 2027.');
+ if(input.format!=='asia-2027-backup-v1'||!object(input.state)||!Array.isArray(input.restaurants))throw Error('Use o arquivo de backup exportado pelo mele.va.');
  const merged=structuredClone(current),conflicts=[];let additions=0;
  for(const [date,patches] of Object.entries(input.state)){
   if(!dataset.days.some(d=>d.date===date)||!object(patches))throw Error('Data inválida.');

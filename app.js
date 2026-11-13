@@ -1,4 +1,6 @@
-import {loadTrip,saveTrip,watchTrip} from './cloud.js';
+import './imports.js';
+import {activeTrip,canEdit} from './trips.js';
+import {client,loadTrip,saveTrip,watchTrip} from './cloud.js';
 import {prepareImport} from './migration.js';
 import { associateWaits, schedule, occupied, dayNumber, transferOwners, connectActivities, normalizeMode } from './schedule.js';
 const categories = { transport: 'Transporte', tour: 'Passeio', meal: 'Refeição', hotel: 'Hotel' };
@@ -81,7 +83,7 @@ function rawBlocksFor(day) {
     return validEdit(edit, block.id) ? [{ ...block, ...edit }] : [block];
   });
   for (const [id, edit] of Object.entries(patches)) {
-    if (!(id.startsWith('user-link-') && edit?.kind==='transfer') && !originalIds.has(id) && /^user-[a-zA-Z0-9-]+$/.test(id) && validEdit(edit, id)) blocks.push(edit);
+    if (!(id.startsWith('user-link-') && edit?.kind==='transfer') && !originalIds.has(id) && /^(?:user|import)-[a-zA-Z0-9-]+$/.test(id) && validEdit(edit, id)) blocks.push(edit);
   }
   return blocks.sort(sortBlocks);
 }
@@ -229,13 +231,13 @@ function timelineView() {
     </aside>
     <section class="card day-card" aria-labelledby="day-heading">
       <div class="day-header">
-        <div><p class="eyebrow">DIA ${String(dayNo).padStart(2,'0')} / 26</p><h2 id="day-heading" tabindex="-1">${safe(day.cities.join(' · '))}</h2></div>
-        <div class="day-nav">
+        <div><p class="eyebrow">DIA ${String(dayNo).padStart(2,'0')} / ${dataset.days.length}</p><h2 id="day-heading" tabindex="-1">${safe(day.cities.join(' · '))}</h2></div>
+        <div class="day-nav">${canEdit()?'<button type="button" class="text-btn" data-day-cities>Cidades do dia</button>':''}
           <button type="button" class="icon-btn" data-day="${visibleDays[index - 1]?.date || ''}" aria-label="Dia anterior" ${index === 0 ? 'disabled' : ''}>‹</button>
           <button type="button" class="icon-btn" data-day="${visibleDays[index + 1]?.date || ''}" aria-label="Próximo dia" ${index === visibleDays.length - 1 ? 'disabled' : ''}>›</button>
         </div>
       </div>
-      <p class="day-meta">${weekday} <span>·</span> ${shortDate(day.date)}/2027 ${day.overnight ? `<span>·</span> Pernoite em ${safe(day.overnight)}` : ''}</p>
+      <p class="day-meta">${weekday} <span>·</span> ${shortDate(day.date)}/${day.date.slice(0,4)} ${day.overnight ? `<span>·</span> Pernoite em ${safe(day.overnight)}` : ''}</p>
       <div class="day-scale" aria-hidden="true"><span>00h</span><span>06h</span><span>12h</span><span>18h</span><span>24h</span></div>
       <div class="timeline-bar" aria-label="Mapa de horários">
         ${[...barEntries,...gaps].map(item => `<button type="button" class="bar-segment ${item.gap ? 'is-gap' : `${item.category} ${item.kind}`} ${item.start === item.end ? 'point' : ''}" style="left:${item.start / 14.4}%;width:${(item.end - item.start) / 14.4}%" data-jump="${item.id}" tabindex="-1" title="${range(item)} · ${safe(item.title)}" aria-label="${range(item)} · ${safe(item.title)}"></button>`).join('')}
@@ -288,7 +290,7 @@ function reservationsView() {
     <div class="reserve-head"><div><p class="eyebrow">VIAGEM INTEIRA</p><h2 id="reserve-title" tabindex="-1">Reservas e custos</h2></div><p class="placeholder">Valores conhecidos para duas pessoas</p></div>
     <div class="total-grid">${Array.from(totals, ([currency, amount]) => `<div class="total"><span>${currency}</span><strong>${money(currency, amount)}</strong></div>`).join('')}
     <div class="total"><span>Smiles</span><strong>${miles.toLocaleString('pt-BR')} milhas</strong></div></div>
-    <p class="placeholder">Totais parciais por moeda original, sem conversão. A planilha soma ${money('BRL', dataset.sheetLodging)} em hospedagem nas diárias preenchidas até Kyoto. Essa referência aparece separada dos valores das reservas.</p>
+    <p class="placeholder">Totais parciais por moeda original, sem conversão. ${activeTrip.id==='asia-2027'?'A referência da planilha original aparece separada dos valores das reservas.':''}</p>
     <div class="reserve-controls">
       <label>Cidade <select id="city-filter">${cityOptions()}</select></label>
       <label>Categoria <select id="reserve-category"><option value="">Todas as categorias</option><option value="hotel" ${reserveCategory === 'hotel' ? 'selected' : ''}>Hospedagem</option><option value="transport" ${reserveCategory === 'transport' ? 'selected' : ''}>Transporte</option></select></label>
@@ -335,7 +337,7 @@ function calendarMarkup(){
       const week=cells.slice(i,i+7),bars=calendarBars(week);
       weeks+=`<div class="calendar-week"><div class="calendar-grid">${week.map(d=>d?`<button type="button" class="calendar-day" data-day="${d.date}" aria-label="${shortDate(d.date)}, ${safe(d.cities.join(' e '))}" ${d.date===selected?'aria-current="date"':''}><b>${Number(d.date.slice(-2))}</b></button>`:'<span></span>').join('')}</div><div class="city-bands">${bars}</div></div>`;
     }
-    return `<section class="calendar-month"><h3>${month.endsWith('03')?'Março':'Abril'} 2027</h3>${weeks}</section>`;
+    return `<section class="calendar-month"><h3>${new Date(month+'-01T12:00:00Z').toLocaleDateString('pt-BR',{month:'long',year:'numeric',timeZone:'UTC'})}</h3>${weeks}</section>`;
   }).join('')+`</div><p class="calendar-caption">${shortDate(selected)} · ${safe(currentDay().cities.join(' → '))}</p>`;
 }
 function hotelDetails(hotel){return `<div class="reservation-details">${hotel.address?`<button type="button" class="address-button" data-copy-address="${safe(hotel.address)}" title="Copiar endereço" aria-label="Copiar endereço: ${safe(hotel.address)}">${safe(hotel.address)} <span aria-hidden="true">⧉</span></button>`:''}${hotel.bookingReference?`<span>Confirmação: ${hotel.confirmationUrl?`<a href="${safe(hotel.confirmationUrl)}" target="_blank" rel="noopener noreferrer" title="Abrir e-mail de confirmação">${safe(hotel.bookingReference)}</a>`:safe(hotel.bookingReference)}</span>`:hotel.confirmationUrl?`<a href="${safe(hotel.confirmationUrl)}" target="_blank" rel="noopener noreferrer">Confirmação por e-mail ↗</a>`:''}</div>`;}
@@ -345,7 +347,7 @@ function renderAlerts(){
   const all=allActivities(),counts={conflicts:0,gaps:0,notices:0};
   const html=dataset.days.map(day=>{
     const blocks=occupied(all,day.date),conflicts=conflictsFor(blocks),gaps=dayPlan(day).gaps;
-    const groups={conflicts:[],gaps:[],notices:[...day.notes]};
+    const groups={conflicts:[],gaps:[],notices:[...(day.notes||[])]};
     for(const b of blocks)for(const other of conflicts.get(b.id)||[])if(b.id<other.id)groups.conflicts.push(`${b.title} e ${other.title}: sobreposição (${range(b)} / ${range(other)}).`);
     for(const gap of gaps)groups.gaps.push(`${range(gap)} · ${duration(gap.end-gap.start)} sem planejamento.`);
     for(const key of Object.keys(counts))counts[key]+=groups[key].length;
@@ -535,11 +537,13 @@ function showDay(date, trigger) {
 root.addEventListener('click', async event => {
   const control = event.target.closest('button');
   if (!control) return;
+  if(control.hasAttribute('data-day-cities')){const value=prompt('Cidades deste dia, separadas por vírgula:',currentDay().cities.join(', '));if(value===null)return;const cities=[...new Set(value.split(',').map(s=>s.trim()).filter(Boolean))];const snapshot=await client.from('trip_state').select('revision').eq('id',activeTrip.id).single();if(snapshot.error){notify('Não foi possível carregar a versão atual.');return;}const result=await client.rpc('set_day_cities',{trip_id:activeTrip.id,day:selected,cities,expected_revision:snapshot.data.revision});if(result.error){notify(result.error.message);return;}location.reload();return;}
   if (control.dataset.copyAddress) {
     try { await navigator.clipboard.writeText(control.dataset.copyAddress); notify('Endereço copiado.'); }
     catch { notify('Não foi possível copiar. Selecione o endereço e copie manualmente.'); }
     return;
   }
+  if(!canEdit()&&(control.hasAttribute('data-restaurant-add')||control.dataset.restaurantEdit||control.dataset.add!==undefined||control.dataset.edit))return;
   if (control.hasAttribute('data-restaurant-add')) {restaurantCity=control.dataset.restaurantAdd||currentDay().cities[0];openRestaurant();}
   if (control.dataset.restaurantEdit) openRestaurant(control.dataset.restaurantEdit);
   if (control.dataset.day) showDay(control.dataset.day, control);
@@ -608,15 +612,17 @@ window.addEventListener('hashchange', () => dataset && render(true));
 editor.addEventListener('click',event=>{const b=event.target.closest('[data-category]');if(b){editor.elements.category.value=b.dataset.category;updateCategories();editorFeedback();}});
 document.querySelector('#trip-alerts-content').addEventListener('click',event=>{const b=event.target.closest('[data-alert-day]');if(b){selected=b.dataset.alertDay;cityFilter='';document.querySelector('#trip-alerts').hidePopover();location.hash='timeline';render(true);}});
 try {
-  const cloud=await loadTrip();dataset=cloud.dataset;state=cloud.state;restaurants=cloud.restaurants;
+  const cloud=await loadTrip();dataset=cloud.dataset;state=cloud.state;restaurants=cloud.restaurants;selected=dataset.days[0].date;
+  document.title=cloud.trip.name+' · mele.va';document.querySelector('.hero h1').textContent=cloud.trip.name;document.querySelector('.hero .eyebrow').textContent=cloud.trip.start_date+' — '+cloud.trip.end_date;document.querySelector('.brand span').textContent='mele.va';document.querySelector('.count-with-alert>strong').textContent=dataset.days.length;if(cloud.trip.id!=='asia-2027'){document.querySelector('.route-caption').textContent=cloud.trip.destinations.join(' · ');document.querySelector('.route-caption').removeAttribute('aria-label');}
   waitLinks=associateWaits(dataset.days);travelOwners=transferOwners(schedule(dataset.days,day=>day.blocks,waitLinks));
   cities=[...new Set(dataset.days.flatMap(day=>day.cities))];
-  watchTrip(doc=>{state=doc.state;restaurants=doc.restaurants;render();});
+  watchTrip((doc,base)=>{state=doc.state;restaurants=doc.restaurants;if(base){dataset=base;waitLinks=associateWaits(dataset.days);cities=[...new Set(dataset.days.flatMap(day=>day.cities))];}render();});
   document.querySelector('#import-cloud').onclick=()=>document.querySelector('#import-file').click();
   document.querySelector('#import-file').onchange=async event=>{
     const file=event.target.files[0];event.target.value='';if(!file)return;
     try{if(file.size>2000000)throw Error('Arquivo muito grande.');
-      prepareImport(JSON.parse(await file.text()),{state,restaurants},dataset,validEdit,async merged=>{
+      const input=JSON.parse(await file.text());if(input.tripId?input.tripId!==activeTrip.id:activeTrip.id!=='asia-2027')throw Error('Este backup pertence a outra viagem.');
+      prepareImport(input,{state,restaurants},dataset,validEdit,async merged=>{
         await saveTrip(merged.state,merged.restaurants,{importing:true});state=merged.state;restaurants=merged.restaurants;render();notify('Importação salva na nuvem.');
       });
     }catch(error){alert('Não foi possível importar: '+error.message);}
