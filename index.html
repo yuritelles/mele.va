@@ -11,6 +11,7 @@
   <link rel="icon" href="mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
+  <script type="module" src="ai-panel.js"></script>
 </head>
 <body class="signed-out">
 <section id="login-panel" class="card login-panel" hidden><p class="eyebrow">MELE.VA</p><h1>mele.va</h1><p>Entre com Google para criar sua conta e planejar suas viagens.</p><button id="google-login" class="button primary">Entrar com Google</button><button id="switch-account" class="text-btn" hidden>Trocar de conta</button><p id="login-message" role="status"></p></section>
@@ -95,5 +96,7 @@
     </form>
   </dialog>
   <div id="toast" role="status" aria-live="polite" hidden></div>
+<button id="ai-open" class="ai-launcher" aria-label="Abrir assistente da viagem" aria-haspopup="dialog"><span aria-hidden="true">✦</span> Assistente</button>
+<dialog id="ai-panel" aria-labelledby="ai-title"><header class="ai-head"><div><p class="eyebrow">MELE.VA · IA</p><h2 id="ai-title">Assistente da viagem</h2></div><button id="ai-close" class="text-btn" aria-label="Fechar assistente">✕</button></header><p id="ai-trip" class="ai-trip"></p><div class="ai-status"><span class="badge">Em preparação</span><h3>Seu plano. Suas viagens.</h3><p>A proposta é usar o plano ChatGPT de cada pessoa, vinculado à própria conta.</p><p>O chat dentro do mele.va ainda não está disponível. A ativação depende da habilitação pela OpenAI e da configuração da conexão.</p></div><div class="ai-connection"><strong>Conversa dentro do app</strong><p>Depois da ativação, você poderá autorizar o uso do seu plano. A disponibilidade e os limites dependerão da sua conta.</p><button class="button" disabled aria-describedby="ai-unavailable">Vincular meu ChatGPT</button><p id="ai-unavailable" class="placeholder">Vinculação ainda indisponível. Nenhuma conta está conectada por este painel.</p></div><div class="ai-connection"><strong>Plugin no ChatGPT</strong><p>O plugin mele.va está em configuração. Quando estiver conectado, você poderá trabalhar nas viagens diretamente pelo ChatGPT.</p><div class="ai-actions"><button id="ai-copy" class="button">Copiar pedido sobre esta viagem</button><a class="text-btn" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Abrir ChatGPT ↗</a></div><p id="ai-copy-status" role="status"></p></div></dialog>
 </body>
 </html>

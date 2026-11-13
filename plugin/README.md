@@ -29,3 +29,11 @@ Referências verificadas em 13/11/2026:
 - https://developers.openai.com/siwc/quickstart
 - https://developers.openai.com/cookbook/articles/sign-in-with-chatgpt
 - https://developers.openai.com/api/docs/guides/chatkit
+
+## Registrar o cliente no pacote
+
+Depois de obter o Client ID público, executar na raiz do repositório:
+
+`node scripts/configure-plugin.js CLIENT_ID client_secret_basic`
+
+Use o método real configurado no provedor. O script não aceita nem armazena segredos e não ativa o servidor. A solicitação para o chat hospedado com plano próprio está preparada em `CHATGPT-PLAN-ACCESS.md`.
