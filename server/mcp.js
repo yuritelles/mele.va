@@ -9,7 +9,7 @@ const issuer=url+'/auth/v1';
 export async function handle(req,env){
  const path=new URL(req.url).pathname;
  if(path.endsWith('/.well-known/oauth-protected-resource'))return Response.json({resource,authorization_servers:[issuer],bearer_methods_supported:['header'],scopes_supported:['openid','email','profile']});
- const allowed=env('MCP_CLIENT_ID');
+ const allowed=env('MCP_CLIENT_ID') ?? '32bba8a0-da54-46c3-9a71-4c444c20136c';
  if(!allowed)return Response.json({error:'Integração aguardando configuração OAuth.'},{status:503});
  const token=req.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
  const denied=()=>Response.json({error:'Autorização necessária.'},{status:401,headers:{'WWW-Authenticate':`Bearer resource_metadata="${resource}/.well-known/oauth-protected-resource"`}});
@@ -18,7 +18,7 @@ export async function handle(req,env){
  const {data,error}=await db.auth.getClaims(token);
  const c=data?.claims;
  // A dedicated audience is mandatory: browser session tokens are never accepted.
- if(error||!c||c.iss!==issuer||c.client_id!==allowed||!([c.aud].flat().includes(resource))||c.role!=='authenticated')return denied();
+ if(error||!validClaims(c,allowed))return denied();
  const user=await db.auth.getUser(token);if(user.error||!user.data.user)return denied();
  if(req.method!=='POST')return new Response(null,{status:405,headers:{Allow:'POST'}});
  if(Number(req.headers.get('content-length')||0)>1600000)return new Response(null,{status:413});
@@ -44,4 +44,8 @@ export function createServer(db){
  const payload=z.discriminatedUnion('kind',[z.object({kind:z.literal('activity'),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),activity,source_url:z.string().url().optional()}),z.object({kind:z.literal('restaurant'),city:z.string().min(1).max(100),name:z.string().min(1).max(120),note:z.string().max(600).default(''),source_url:z.string().url().optional()})]);
  server.registerTool('stage_import',{description:'Prepara até 50 atividades/restaurantes para revisão em Importações no app. Não grava no roteiro. source_key deve ser estável por origem+item; repetir a mesma chave/conteúdo é seguro. Horários em minutos a partir da meia-noite da data local (fim pode exceder 1440). Não invente dados ausentes. Reservas estruturadas e atualização/cancelamento de reservas ainda não são suportados; informe essa limitação.',inputSchema:{job_id:job,items:z.array(z.object({source_key:z.string().min(1).max(200),payload})).min(1).max(50)},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:false}},({job_id,items})=>result(db.rpc('stage_import',{job:job_id,batch:items})));
  return server;
+}
+
+export function validClaims(c,allowed){
+ return !!c && c.iss===issuer && c.client_id===allowed && c.aud===resource && c.role==='authenticated' && typeof c.sub==='string' && c.sub.length>0 && Number.isFinite(c.exp) && c.exp>Date.now()/1000;
 }

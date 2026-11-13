@@ -10,7 +10,16 @@
             "type": "oauth",
             "authorizationUrl": "https://porzljqjsqlqutwtwyqb.supabase.co/auth/v1/oauth/authorize",
             "tokenUrl": "https://porzljqjsqlqutwtwyqb.supabase.co/auth/v1/oauth/token",
-            "baseScopes": ["openid", "email", "profile"]
+            "baseScopes": [
+              "openid",
+              "email",
+              "profile"
+            ],
+            "client": {
+              "mode": "provided",
+              "clientId": "32bba8a0-da54-46c3-9a71-4c444c20136c",
+              "tokenEndpointAuthMethod": "client_secret_basic"
+            }
           }
         }
       }

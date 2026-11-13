@@ -24,13 +24,13 @@ Suporte atual: atividades e restaurantes. Importação de reservas estruturadas 
 
 ## Conexão ChatGPT — ativação pendente
 
-`server/` contém a função `mele-mcp` com leitura de viagens e preparação de lotes; `consent.html` contém a autorização. O endpoint fica bloqueado (503) enquanto `MCP_CLIENT_ID` não estiver configurado. Tokens comuns do navegador são recusados. Ainda é necessário validar o fluxo OAuth completo em conta real antes de considerar a integração disponível.
+`server/` contém a função `mele-mcp` com leitura de viagens e preparação de lotes; `consent.html` contém a autorização. O Client ID público já está configurado no servidor (com override opcional via `MCP_CLIENT_ID`). Requisições sem token recebem 401. Tokens comuns do navegador são recusados. Ainda é necessário validar o fluxo OAuth completo em conta real antes de considerar a integração disponível.
 
 Para ativar, configurar no painel Supabase:
 
 1. Auth > OAuth Server: habilitar o servidor; configurar a URL de consentimento para `https://yuritelles.github.io/mele.va/consent.html`. Conferir a URL resultante do Site URL + Authorization Path, pois o app está numa subpasta. Adicionar essa URL em Auth > URL Configuration > Redirect URLs para o retorno do login Google.
-2. Registrar um cliente OAuth dedicado ao ChatGPT, com PKCE e o callback exato apresentado pela interface de conexão do ChatGPT. Não habilitar registro dinâmico irrestrito. Guardar o segredo apenas nos painéis adequados. Definir o Client ID como `MCP_CLIENT_ID` na função.
-3. Configurar e testar um access-token hook para esse cliente que inclua a audiência `https://porzljqjsqlqutwtwyqb.supabase.co/functions/v1/mele-mcp`. Antes da ativação, restringir também os clientes OAuth permitidos nas políticas do banco e validar a audiência contra o Data API. Não alterar a audiência das sessões normais do app. O código deliberadamente recusa tokens sem a audiência específica.
+2. Registrar um cliente OAuth dedicado ao ChatGPT, com PKCE e o callback exato apresentado pela interface de conexão do ChatGPT. Não habilitar registro dinâmico irrestrito. Guardar o segredo apenas nos painéis adequados. O Client ID público registrado está no manifesto e no servidor.
+3. A migração `db/oauth-client.sql` já criou `public.mele_mcp_access_token` e as políticas restritivas. Ativar manualmente em Authentication > Hooks > Custom Access Token, PostgreSQL, schema public, função mele_mcp_access_token. Sessões normais ficam intactas; apenas esse cliente recebe a audiência MCP. Outros clientes são bloqueados; o cliente MCP só pode ler e inserir rascunhos pendentes, respeitando a associação e papel na viagem. Validar também emissão/renovação real do token e acesso ao Data API após ativação. `db/verify-oauth.sql` testa as políticas em transação revertida.
 4. Conectar o endpoint MCP no ChatGPT e testar leitura, preparação, revisão no app, retomada e revogação com contas distintas. A conexão ainda não foi instalada nem validada ponta a ponta.
 
 Documentação: https://supabase.com/docs/guides/auth/oauth-server/getting-started e https://supabase.com/docs/guides/auth/oauth-server/token-security.

@@ -1,0 +1,32 @@
+begin;
+select set_config('test.owner_claims',jsonb_build_object('sub',t.owner_id,'email',u.email,'role','authenticated','aud','authenticated','app_metadata',jsonb_build_object('provider','google'))::text,true) from public.trips t join auth.users u on u.id=t.owner_id limit 1;
+select set_config('test.trip',(select id from public.trips limit 1),true);
+do $$ declare c jsonb := current_setting('test.owner_claims')::jsonb; o jsonb; begin
+ o:=public.mele_mcp_access_token(jsonb_build_object('claims',c));
+ if o->'claims'<>c then raise exception 'Browser claims changed';end if;
+ o:=public.mele_mcp_access_token(jsonb_build_object('claims',c||'{"client_id":"32bba8a0-da54-46c3-9a71-4c444c20136c"}'));
+ if o->'claims'->>'aud'<>'https://porzljqjsqlqutwtwyqb.supabase.co/functions/v1/mele-mcp' then raise exception 'Missing audience';end if;
+ perform set_config('test.mcp_claims',(o->'claims')::text,true);
+end;$$;
+set local role authenticated;
+do $$ declare n integer;j uuid;begin
+ perform set_config('request.jwt.claims',current_setting('test.owner_claims'),true);
+ if not exists(select 1 from public.trips where id=current_setting('test.trip')) then raise exception 'Browser access broken';end if;
+ perform set_config('request.jwt.claims',current_setting('test.mcp_claims'),true);
+ if not exists(select 1 from public.trips where id=current_setting('test.trip')) then raise exception 'MCP read broken';end if;
+ update public.trips set name=name where id=current_setting('test.trip');get diagnostics n=row_count;
+ if n<>0 then raise exception 'OAuth could edit trip';end if;
+ update public.trip_state set document=document where id=current_setting('test.trip');get diagnostics n=row_count;
+ if n<>0 then raise exception 'OAuth could apply edits';end if;
+ insert into public.import_jobs(trip_id,label) values(current_setting('test.trip'),'Rollback OAuth verification') returning id into j;
+ perform public.stage_import(j,'[{"source_key":"rollback-test","payload":{"kind":"restaurant","city":"Test","name":"Test"}}]');
+ update public.import_items set status='applied' where job_id=j;get diagnostics n=row_count;
+ if n<>0 then raise exception 'OAuth could approve import';end if;
+ perform set_config('request.jwt.claims',(current_setting('test.mcp_claims')::jsonb||'{"client_id":"untrusted"}')::text,true);
+ if exists(select 1 from public.trips) or exists(select 1 from public.import_jobs) then raise exception 'Foreign OAuth has access';end if;
+ perform set_config('request.jwt.claims',(current_setting('test.mcp_claims')::jsonb||'{"aud":"authenticated"}')::text,true);
+ if exists(select 1 from public.trips) then raise exception 'Wrong audience has access';end if;
+ perform set_config('request.jwt.claims',(current_setting('test.mcp_claims')::jsonb||jsonb_build_object('sub',gen_random_uuid(),'email','unrelated@example.invalid'))::text,true);
+ if exists(select 1 from public.trips) then raise exception 'Unrelated user has access';end if;
+end;$$;
+rollback;
