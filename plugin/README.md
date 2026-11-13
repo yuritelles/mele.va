@@ -37,3 +37,7 @@ Depois de obter o Client ID público, executar na raiz do repositório:
 `node scripts/configure-plugin.js CLIENT_ID client_secret_basic`
 
 Use o método real configurado no provedor. O script não aceita nem armazena segredos e não ativa o servidor. A solicitação para o chat hospedado com plano próprio está preparada em `CHATGPT-PLAN-ACCESS.md`.
+
+## Decisão atual de produto
+
+O chat incorporado e a solicitação comercial de Sign in with ChatGPT estão adiados. O fluxo adotado é **Usar no ChatGPT**, com pedido copiado e plugin MCP. `CHATGPT-PLAN-ACCESS.md` permanece somente como referência para uma possibilidade futura; não é pré-requisito do plugin.

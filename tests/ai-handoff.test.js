@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {tripPrompt} from '../ai-handoff.js';
+test('handoff uses selected trip without exporting private itinerary',()=>{const trip={id:'trip-b',name:'Minha viagem',context:'PRIVATE',reservations:['SECRET']};const p=tripPrompt(trip,'gaps');assert.match(p,/trip-b/);assert.match(p,/horários livres/);assert.doesNotMatch(p,/PRIVATE|SECRET/);assert.match(p,/não estiver conectado/);assert.equal(tripPrompt(null),'');});
+test('import handoff explicitly describes current limitations',()=>{assert.match(tripPrompt({id:'trip-b',name:'Teste'},'import'),/Reservas estruturadas.*não são suportadas/);});
